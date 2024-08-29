@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 
-class SchimaSimulation(BaseModel):
+class SchemaSimulation(BaseModel):
     """
     POST /simulation/create [Cria simulação]
         Back recebe objeto com simulatedTime,
@@ -14,17 +14,17 @@ class SchimaSimulation(BaseModel):
     selecteds: int
 
 
-class SchimaReturnSimulation(BaseModel):
+class SchemaReturnSimulation(BaseModel):
     id: int
 
 
-class SchimaBaseRoadCrossing(BaseModel):
+class SchemaBaseRoadCrossing(BaseModel):
     redDuration: int
     greenDuration: int
     cycleStartTime: int
 
 
-class SchimaProcessResults(BaseModel):
+class SchemaProcessResults(BaseModel):
     """
     POST /simulation/process-results/{id} [processa resultados da geração]
         Back recebe array de avgTime, carsTotal, simulatedTime, avgSpeed,
@@ -37,11 +37,11 @@ class SchimaProcessResults(BaseModel):
     simulatedTime: int
     avgSpeed: int
     occupationRate: int
-    lights: list[SchimaBaseRoadCrossing]
+    lights: list[SchemaBaseRoadCrossing]
     iterateNext: bool
 
 
-class SchimaDone(BaseModel):
+class SchemaDone(BaseModel):
     """
     POST /simulation/done/{id} [retorna se simulação acabou ou não]
         Front recebe array com 1 item true ou false
@@ -50,7 +50,7 @@ class SchimaDone(BaseModel):
     done: bool
 
 
-class SchimaPrematureTermination(BaseModel):
+class SchemaPrematureTermination(BaseModel):
     """
     Ela add ao banco a informação de que aquela simulação acabou.
     POST /simulation/premature-termination/{id}
@@ -61,7 +61,7 @@ class SchimaPrematureTermination(BaseModel):
     pass
 
 
-class SchimaFinalResults(BaseModel):
+class SchemaFinalResults(BaseModel):
     """
     GET /simulation/final-results/{id} [retorna estatíticas]
         Front recebe resultados
@@ -70,7 +70,7 @@ class SchimaFinalResults(BaseModel):
     pass
 
 
-class SchimaAll(BaseModel):
+class SchemaAll(BaseModel):
     """
     GET /simulation/all
         Retorna lista de todas otimizações feitas
