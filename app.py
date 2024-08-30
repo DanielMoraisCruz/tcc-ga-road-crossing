@@ -14,7 +14,7 @@ from SqlAlchemy.database import (
     DB_NewSimulationIteration,
     DB_SaveConfigAlgGen,
 )
-from SqlAlchemy.models import ModelRoadCrossing, ModelSimulationIteration
+from SqlAlchemy.models import ModelConfigAlgGen, ModelRoadCrossing, ModelSimulationIteration
 from sqlalchemy.orm import Session
 
 app = FastAPI()
@@ -26,10 +26,11 @@ def createSimulation(simulation: SchemaSimulation, session: Session = Depends(DB
         # Salva a configuração inicial da GA
         DB_SaveConfigAlgGen(
             session,
-            config_algGen={
-                'selecteds': simulation.selecteds,
-                'mutation_rate': simulation.mutationRate,
-            },
+            config_algGen=ModelConfigAlgGen(
+                population=simulation.population,
+                generations=simulation.generations,
+                selecteds=simulation.selecteds,
+            ),
         )
         session.commit()
     except Exception as e:
