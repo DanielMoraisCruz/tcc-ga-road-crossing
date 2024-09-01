@@ -1,4 +1,6 @@
+import uvicorn
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from schemas import (
     SchemaAll,
@@ -9,6 +11,7 @@ from schemas import (
     SchemaSimulation,
 )
 from SqlAlchemy.database import (
+    DB_create_tables,
     DB_GetConfigAlgGen,
     DB_GetSession,
     DB_NewSimulationIteration,
@@ -19,6 +22,18 @@ from sqlalchemy.orm import Session
 
 app = FastAPI()
 
+# Este método não atualiza tables já existentes
+# Terá que usar uma migration tool (Alembic)
+DB_create_tables()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=['http://localhost', 'http://localhost:8000', 'http://localhost:4200'],  # List the allowed origins
+    allow_credentials=True,
+    allow_methods=['*'],  # Allow all HTTP methods
+    allow_headers=['*'],  # Allow all headers
+)
+
 
 @app.post('/simulation/create', response_model=SchemaReturnSimulation)
 def createSimulation(simulation: SchemaSimulation, session: Session = Depends(DB_GetSession)):
@@ -28,26 +43,28 @@ def createSimulation(simulation: SchemaSimulation, session: Session = Depends(DB
             session,
             config_algGen=ModelConfigAlgGen(
                 population=simulation.population,
-                generations=simulation.generations,
+                mutation_rate=simulation.mutationRate,
                 selecteds=simulation.selecteds,
             ),
         )
         session.commit()
     except Exception as e:
+        print(e)
         raise HTTPException(status_code=500, detail=f'Erro ao criar simulação: {e}')
 
     try:
         # Cria uma nova simulação no banco de dados
-        simulationDB = (
-            session,
+
+        simulationDB = DB_NewSimulationIteration(session,
             ModelSimulationIteration(
                 selecteds=simulation.selecteds,
                 mutation_rate=simulation.mutationRate,
-            ),
+                population=simulation.population
+            )
         )
-
         return {'id': simulationDB.simulationId}  # Retorna o ID da simulação criada
     except Exception as e:
+        print(e, __dict__)
         raise HTTPException(status_code=500, detail=f'Erro ao criar simulação: {e}')
 
 
@@ -131,3 +148,7 @@ def get_all_simulations(session: Session = Depends(DB_GetSession)):
         return simulations  # Adaptar para o modelo de SchemaAll conforme necessário
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'Erro ao buscar todas simulações: {e}')
+
+
+if __name__ == '__main__':
+    uvicorn.run(app, host='0.0.0.0', port=8000)

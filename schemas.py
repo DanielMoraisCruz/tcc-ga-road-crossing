@@ -9,7 +9,7 @@ class SchemaSimulation(BaseModel):
         Front recebe id
     """
 
-    simulatedTime: int
+    population: int
     mutationRate: float
     selecteds: int
 
