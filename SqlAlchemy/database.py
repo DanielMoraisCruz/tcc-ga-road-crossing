@@ -1,11 +1,25 @@
 from settings import Settings
 from SqlAlchemy import loggings
 from sqlalchemy import create_engine
-from SqlAlchemy.models import ModelConfigAlgGen, ModelRoadCrossing, ModelSimulationIteration
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.declarative import declarative_base
+from SqlAlchemy.models import (
+    ModelConfigAlgGen,
+    ModelRoadCrossing,
+    ModelSimulationIteration,
+    table_registry,
+)
+from sqlalchemy.orm import Session, sessionmaker
 
-engine = create_engine(Settings().DATABASE_URL)
+engine = create_engine(Settings().DATABASE_URL, connect_args={"check_same_thread": False})
 log = loggings.Log('database')
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+
+def DB_create_tables():
+    table_registry.metadata.create_all(bind=engine)
+    print("Banco de dados criado com sucesso.")
 
 
 def DB_GetSession() -> Session:
@@ -74,10 +88,10 @@ def DB_GetConfigAlgGen(session: Session, id_simulation: int) -> ModelConfigAlgGe
 
 
 def DB_PatchConfigAlgGen(
-    session: Session,
-    new_population: list[dict[str, int]] = [{'null': 0}],
-    num_selecteds: int = 0,
-    mutation_rate: float = 0.0,
+        session: Session,
+        new_population: list[dict[str, int]] = [{'null': 0}],
+        num_selecteds: int = 0,
+        mutation_rate: float = 0.0,
 ) -> ModelConfigAlgGen:
     try:
         config = session.query(ModelConfigAlgGen).first()
