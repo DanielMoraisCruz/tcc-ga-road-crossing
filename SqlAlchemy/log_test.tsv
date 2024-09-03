@@ -519,3 +519,10 @@ d3702bfb-9e01-4399-9b80-fe9e465c7117	-	-	-	-	First Execution
 d3702bfb-9e01-4399-9b80-fe9e465c7117	2024-09-01 16:33:13,536	database	48	INFO	Log criado com sucesso
 14574fee-84e1-437d-a989-c2bb7a505a60	-	-	-	-	First Execution
 14574fee-84e1-437d-a989-c2bb7a505a60	2024-09-01 16:43:13,921	database	48	INFO	Log criado com sucesso
+1705a890-53a2-4b6e-9f47-48ac58062c8e	-	-	-	-	First Execution
+1705a890-53a2-4b6e-9f47-48ac58062c8e	2024-09-02 21:21:57,520	database	48	INFO	Log criado com sucesso
+322315d9-46da-4df9-855f-beee2dce3ee8	-	-	-	-	First Execution
+322315d9-46da-4df9-855f-beee2dce3ee8	2024-09-02 21:25:47,141	database	48	INFO	Log criado com sucesso
+140a262d-a669-465e-97e9-e9dcaf12a1af	-	-	-	-	First Execution
+140a262d-a669-465e-97e9-e9dcaf12a1af	2024-09-02 21:25:48,916	database	48	INFO	Log criado com sucesso
+322315d9-46da-4df9-855f-beee2dce3ee8	2024-09-02 21:25:48,991	watchfiles.main	294	DEBUG	1 change detected: {(<Change.modified: 2>, 'C:\\Users\\danda\\PycharmProjects\\tcc-ga-read-crossing\\SqlAlchemy\\log_test.tsv')}

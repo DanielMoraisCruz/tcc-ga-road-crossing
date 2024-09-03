@@ -11,8 +11,12 @@ class GeneticAlgorithm:
         self.selecteds: int = selecteds
 
     def crossover(self, results_returned: list):
-        # TODO: Colocar condição de parada (quantidade minima de gerações, e delta entre a atual e anterior)
+        # TODO: Colocar condição de parada
+        #   (quantidade minima de gerações, e delta entre a atual e anterior)
         parents: list = self.select(results_returned)
+        if not parents:
+            return None
+
         total_iterations: int = len(self.population)
         new_population: list = []
 
@@ -46,7 +50,7 @@ class GeneticAlgorithm:
         # Atualiza a população com novos indivíduos e os dois melhores da geração anterior
 
         new_population = self.mutate(new_population)
-        self.population = new_population[:-self.selecteds].append(parents[:])
+        self.population = new_population[: -self.selecteds].append(parents[:])
 
         return self.population
 
@@ -55,16 +59,22 @@ class GeneticAlgorithm:
             random_nun = random.random()
             for semaphore in individual:
                 if random_nun < self.mutation_rate:
-                    semaphore['redDuration'] = random.randint(15, 75) # TODO: Documentar este valor no relatório
-                    semaphore['greenDuration'] = random.randint(15, 75) # TODO: Documentar este valor no relatório
-                    semaphore['cycleStartTime'] = random.randint(0, 120) # TODO: Documentar este valor no relatório
+                    semaphore['redDuration'] = random.randint(15, 75)
+                    # TODO: Documentar este valor no relatório
+                    semaphore['greenDuration'] = random.randint(15, 75)
+                    # TODO: Documentar este valor no relatório
+                    semaphore['cycleStartTime'] = random.randint(0, 120)
+                    # TODO: Documentar este valor no relatório
         return individuals
 
-    def select(self, all_results: list):
+    def select(self, all_results: list, _delta: float = 0.1):
         # ordena os resultados pelo tempo médio de viagem e no final pega os N melhores
         all_results.sort(key=lambda x: x['tripAvg'])
 
-        # TODO: Calcula o desvio padrão de todos os resultados
+        desvio_padrao = all_results['tripAvg'].std()
+
+        if desvio_padrao <= _delta:
+            return None
 
         all_light_results = [result['lights'] for result in all_results]
         return all_light_results[: self.selecteds]

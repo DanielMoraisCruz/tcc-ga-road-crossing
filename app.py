@@ -2,6 +2,7 @@ import uvicorn
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from GeneticAlgorithm import GeneticAlgorithm
 from schemas import (
     SchemaAll,
     SchemaDone,
@@ -13,11 +14,20 @@ from schemas import (
 from SqlAlchemy.database import (
     DB_create_tables,
     DB_GetConfigAlgGen,
+    DB_GetRoadCrossingNoID,
+    DB_GetRoadCrossings,
     DB_GetSession,
+    DB_NewRoadCrossing,
     DB_NewSimulationIteration,
     DB_SaveConfigAlgGen,
+    DB_SaveResults,
 )
-from SqlAlchemy.models import ModelConfigAlgGen, ModelRoadCrossing, ModelSimulationIteration
+from SqlAlchemy.models import (
+    ModelConfigAlgGen,
+    ModelResults,
+    ModelRoadCrossing,
+    ModelSimulationIteration,
+)
 from sqlalchemy.orm import Session
 
 app = FastAPI()
@@ -28,7 +38,11 @@ DB_create_tables()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['http://localhost', 'http://localhost:8000', 'http://localhost:4200'],  # List the allowed origins
+    allow_origins=[  # List the allowed origins
+        'http://localhost',
+        'http://localhost:8000',
+        'http://localhost:4200',
+    ],
     allow_credentials=True,
     allow_methods=['*'],  # Allow all HTTP methods
     allow_headers=['*'],  # Allow all headers
@@ -55,17 +69,35 @@ def createSimulation(simulation: SchemaSimulation, session: Session = Depends(DB
     try:
         # Cria uma nova simulação no banco de dados
 
-        simulationDB = DB_NewSimulationIteration(session,
+        simulationDB = DB_NewSimulationIteration(
+            session,
             ModelSimulationIteration(
                 selecteds=simulation.selecteds,
                 mutation_rate=simulation.mutationRate,
-                population=simulation.population
-            )
+                population=simulation.population,
+            ),
         )
-        return {'id': simulationDB.simulationId}  # Retorna o ID da simulação criada
     except Exception as e:
-        print(e, __dict__)
+        print(e)
         raise HTTPException(status_code=500, detail=f'Erro ao criar simulação: {e}')
+
+    try:
+        # Cria os semáforos da simulação
+        for light in simulation.lights:
+            DB_NewRoadCrossing(
+                session,
+                ModelRoadCrossing(
+                    simulation_id=simulationDB.simulationId,
+                    redDuration=light.redDuration,
+                    greenDuration=light.greenDuration,
+                    cycleStartTime=light.cycleStartTime,
+                ),
+            )
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail=f'Erro ao criar semáforos: {e}')
+
+    return {'id': simulationDB.simulationId}  # Retorna o ID da simulação criada
 
 
 @app.post('/simulation/process-results/{id}')
@@ -73,34 +105,65 @@ def process_results(
     id: int, results: list[SchemaProcessResults], session: Session = Depends(DB_GetSession)
 ):
     try:
-        all_lights: list = []
+        # Salva os resultados da simulação no banco de dados
         for result in results:
-            simulation_iteration = DB_NewSimulationIteration(
+            DB_SaveResults(
                 session,
-                ModelSimulationIteration(
-                    duration=result.simulatedTime,
-                    tripAvg=result.avgTime,
+                ModelResults(
+                    simulation_id=id,
+                    duration=result.avgTime,
+                    tripAvg=result.avgSpeed,
                     tripPeak=result.carsTotal,
                     densityPeak=result.occupationRate,
-                    densityAvg=result.avgSpeed,
+                    densityAvg=result.carsTotal,
                     vehiclesTotal=result.carsTotal,
-                    trafficLights=[
-                        ModelRoadCrossing(
-                            simulation_id=id,
-                            redDuration=light['redDuration'],
-                            greenDuration=light['greenDuration'],
-                            cycleStartTime=light['cycleStartTime'],
-                        )
-                        for light in result.lights
-                    ],
                 ),
             )
-            session.commit()
-            # Adicionando os IDs dos semáforos em uma lista para cada iteração
-            all_lights.append([light.simulation_id for light in simulation_iteration.roadCrossing])
+        session.commit()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'Erro ao salvar resultados: {e}')
 
-        # Retornando a lista de listas de IDs dos semáforos
-        return all_lights
+    try:
+        # Executa crossover e mutação
+        config = DB_GetConfigAlgGen(
+            session,
+            id_simulation=id,
+        )
+        if config is None:
+            raise HTTPException(status_code=404, detail='Configuração não encontrada')
+        ga = GeneticAlgorithm(
+            population=config.population,
+            selecteds=config.selecteds,
+            mutation_rate=config.mutation_rate,
+        )
+        parents = DB_GetRoadCrossings(session, id)
+        new_population = ga.crossover(parents)
+        if new_population is None:
+            return 0
+
+        DB_SaveConfigAlgGen(
+            session,
+            ModelConfigAlgGen(
+                population=new_population,
+                selecteds=config.selecteds,
+                mutation_rate=config.mutation_rate,
+            ),
+        )
+
+        # Salva os novos semaforos
+        for light in new_population:
+            DB_NewRoadCrossing(
+                session,
+                ModelRoadCrossing(
+                    simulation_id=id,
+                    redDuration=light.redDuration,
+                    greenDuration=light.greenDuration,
+                    cycleStartTime=light.cycleStartTime,
+                ),
+            )
+        # Pega e retorna todos os semaforos sem seus ids
+        return DB_GetRoadCrossingNoID(session, id)
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'Erro ao processar resultados: {e}')
 
@@ -110,7 +173,9 @@ def check_simulation_done(session: Session = Depends(DB_GetSession)):
     try:
         config = DB_GetConfigAlgGen(
             session,
+            id_simulation=id,
         )
+        # Todo: Implementar lógica para verificar se a simulação acabou
         done = config is None or config.population == 0  # Exemplo de verificação simples
         return {'done': done}
     except Exception as e:
