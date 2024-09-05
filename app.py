@@ -11,17 +11,7 @@ from schemas import (
     SchemaReturnSimulation,
     SchemaSimulation,
 )
-from SqlAlchemy.database import (
-    DB_create_tables,
-    DB_GetConfigAlgGen,
-    DB_GetRoadCrossingNoID,
-    DB_GetRoadCrossings,
-    DB_GetSession,
-    DB_NewRoadCrossing,
-    DB_NewSimulationIteration,
-    DB_SaveConfigAlgGen,
-    DB_SaveResults,
-)
+from SqlAlchemy.database import DatabaseInterface
 from SqlAlchemy.models import (
     ModelConfigAlgGen,
     ModelResults,
@@ -48,28 +38,23 @@ app.add_middleware(
     allow_headers=['*'],  # Allow all headers
 )
 
+def get_database() -> DatabaseInterface:
+    return Database(engine)
 
 @app.post('/simulation/create', response_model=SchemaReturnSimulation)
-def createSimulation(simulation: SchemaSimulation, session: Session = Depends(DB_GetSession)):
+def create_simulation(simulation: SchemaSimulation,
+                      db: DatabaseInterface = Depends(get_database)):
+    session = db.get_session()
     try:
-        # Salva a configuração inicial da GA
-        DB_SaveConfigAlgGen(
+        db.save_config_alg_gen(
             session,
-            config_algGen=ModelConfigAlgGen(
+            ModelConfigAlgGen(
                 population=simulation.population,
                 mutation_rate=simulation.mutationRate,
                 selecteds=simulation.selecteds,
             ),
         )
-        session.commit()
-    except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail=f'Erro ao criar simulação: {e}')
-
-    try:
-        # Cria uma nova simulação no banco de dados
-
-        simulationDB = DB_NewSimulationIteration(
+        simulation_db = db.new_simulation_iteration(
             session,
             ModelSimulationIteration(
                 selecteds=simulation.selecteds,
@@ -77,28 +62,19 @@ def createSimulation(simulation: SchemaSimulation, session: Session = Depends(DB
                 population=simulation.population,
             ),
         )
-    except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail=f'Erro ao criar simulação: {e}')
-
-    try:
-        # Cria os semáforos da simulação
         for light in simulation.lights:
-            DB_NewRoadCrossing(
+            db.new_road_crossing(
                 session,
                 ModelRoadCrossing(
-                    simulation_id=simulationDB.simulationId,
+                    simulation_id=simulation_db.simulationId,
                     redDuration=light.redDuration,
                     greenDuration=light.greenDuration,
                     cycleStartTime=light.cycleStartTime,
                 ),
             )
+        return {'id': simulation_db.simulationId}
     except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail=f'Erro ao criar semáforos: {e}')
-
-    return {'id': simulationDB.simulationId}  # Retorna o ID da simulação criada
-
+        raise HTTPException(status_code=500, detail=f'Erro ao criar simulação: {e}')
 
 @app.post('/simulation/process-results/{id}')
 def process_results(
