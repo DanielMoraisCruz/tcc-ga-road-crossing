@@ -1,18 +1,17 @@
-# random_generator.py
 import random
 
 from random_interface import RandomInterface
 
 
 class RandomGenerator(RandomInterface):
-    @staticmethod
-    def randint(a: int, b: int) -> int:
+    @classmethod
+    def randint(cls, a: int, b: int) -> int:
         return random.randint(a, b)
 
-    @staticmethod
-    def random() -> float:
+    @classmethod
+    def random(cls) -> float:
         return random.random()
 
-    @staticmethod
-    def choice(seq):
+    @classmethod
+    def choice(cls, seq):
         return random.choice(seq)

@@ -10,9 +10,7 @@ table_registry = registry()
 class ModelSimulationIteration:
     __tablename__ = 'Simulations'
 
-    simulationId: Mapped[Optional[int]] = mapped_column(
-        primary_key=True, autoincrement=True, init=False
-    )
+    simulationId: Mapped[Optional[int]] = mapped_column(primary_key=True, autoincrement=True, init=False)
     selecteds: Mapped[int] = mapped_column(Integer, nullable=False)
     mutation_rate: Mapped[float] = mapped_column(Float, nullable=False)
     population: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -22,9 +20,7 @@ class ModelSimulationIteration:
 class ModelRoadCrossing:
     __tablename__ = 'RoadCrossings'
 
-    roadCrossingId: Mapped[Optional[int]] = mapped_column(
-        primary_key=True, autoincrement=True, init=False
-    )
+    roadCrossingId: Mapped[Optional[int]] = mapped_column(primary_key=True, autoincrement=True, init=False)
     simulation_id: Mapped[int] = mapped_column(ForeignKey('Simulations.simulationId'))
     redDuration: Mapped[int] = mapped_column(Integer, nullable=False)
     greenDuration: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -38,9 +34,7 @@ class ModelRoadCrossing:
 class ModelConfigAlgGen:
     __tablename__ = 'Config_AlgGen'
 
-    configId: Mapped[Optional[int]] = mapped_column(
-        primary_key=True, autoincrement=True, init=False
-    )
+    configId: Mapped[Optional[int]] = mapped_column(primary_key=True, autoincrement=True, init=False)
     population: Mapped[int] = mapped_column(Integer, nullable=False)
     selecteds: Mapped[int] = mapped_column(Integer, nullable=False)
     mutation_rate: Mapped[float] = mapped_column(Float, nullable=False)
@@ -50,15 +44,12 @@ class ModelConfigAlgGen:
 class ModelResults:
     __tablename__ = 'Results'
 
-    resultId: Mapped[Optional[int]] = mapped_column(
-        primary_key=True, autoincrement=True, init=False
-    )
+    resultId: Mapped[Optional[int]] = mapped_column(primary_key=True, autoincrement=True, init=False)
     simulation_id: Mapped[int] = mapped_column(ForeignKey('Simulations.simulationId'))
     duration: Mapped[int] = mapped_column(Integer, nullable=False)
-    tripAvg: Mapped[int] = mapped_column(Integer, nullable=False)
-    tripPeak: Mapped[int] = mapped_column(Integer, nullable=False)
-    densityPeak: Mapped[int] = mapped_column(Integer, nullable=False)
-    densityAvg: Mapped[int] = mapped_column(Integer, nullable=False)
+    tripAvg: Mapped[float] = mapped_column(Float, nullable=False)
+    tripPeak: Mapped[float] = mapped_column(Float, nullable=False)
+    occupationRate: Mapped[float] = mapped_column(Float, nullable=False)
     vehiclesTotal: Mapped[int] = mapped_column(Integer, nullable=False)
 
     # Relacionamento com ModelSimulationIteration

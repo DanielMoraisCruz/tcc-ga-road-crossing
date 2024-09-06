@@ -25,8 +25,8 @@ pythonpath = "."
 addopts = '-p no:warnings'
 
 [tool.ruff]
-line-length = 100
-extend-exclude = ['Migrations']
+line-length = 200
+extend-exclude = ['Migrations', '.tests']
 
 [tool.ruff.lint]
 preview = true

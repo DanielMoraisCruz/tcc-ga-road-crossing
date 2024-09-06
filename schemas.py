@@ -12,6 +12,9 @@ class SchemaSimulation(BaseModel):
     population: int
     mutationRate: float
     selecteds: int
+    minGenerations: int
+    maxGenerations: int
+    avgTimeDelta: float
 
 
 class SchemaReturnSimulation(BaseModel):
@@ -32,11 +35,11 @@ class SchemaProcessResults(BaseModel):
         Front recebe lights[]
     """
 
-    avgTime: int
+    avgTime: float
     carsTotal: int
     simulatedTime: int
-    avgSpeed: int
-    occupationRate: int
+    avgSpeed: float
+    occupationRate: float
     lights: list[SchemaBaseRoadCrossing]
     iterateNext: bool
 

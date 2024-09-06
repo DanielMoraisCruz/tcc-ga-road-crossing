@@ -16,13 +16,13 @@ class GeneticAlgorithm:
         self.population: List = population
         self.mutation_rate: float = mutation_rate
         self.selecteds: int = selecteds
-        self.random_generator: RandomInterface = random_generator or RandomGenerator()
+        self.random_generator: RandomInterface = random_generator
 
     def crossover(self, results_returned: List):
         if not self.population:
-            raise ValueError("Population is empty")
+            raise ValueError('Population is empty')
         if not results_returned:
-            raise ValueError("Results returned is empty")
+            raise ValueError('Results returned is empty')
 
         parents: List = self.select(results_returned)
         if not parents:
@@ -73,10 +73,9 @@ class GeneticAlgorithm:
                     semaphore['cycleStartTime'] = self.random_generator.randint(0, 120)
         return individuals
 
-
     def select(self, all_results: List, _delta: float = 0.1):
         if not all_results:
-            raise ValueError("All results is empty")
+            raise ValueError('All results is empty')
 
         all_results.sort(key=lambda x: x['tripAvg'])
 
@@ -87,4 +86,3 @@ class GeneticAlgorithm:
 
         all_light_results = [result['lights'] for result in all_results]
         return all_light_results[: self.selecteds]
-
