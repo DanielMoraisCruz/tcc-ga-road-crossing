@@ -1,7 +1,5 @@
 # genetic_algorithm.py
-import math
 from typing import List
-import numpy as np
 
 from random_generator import RandomGenerator
 from random_interface import RandomInterface
@@ -9,12 +7,7 @@ from schemas import SchemaProcessResults
 
 
 class GeneticAlgorithm:
-    def __init__(
-        self,
-        population: int,
-        selecteds: int = 2,
-        mutation_rate: float = 0.1
-    ):
+    def __init__(self, population: int, selecteds: int = 2, mutation_rate: float = 0.1):
         self.population: int = population
         self.mutation_rate: float = mutation_rate
         self.selecteds: int = selecteds
@@ -38,7 +31,6 @@ class GeneticAlgorithm:
             all_reds.append([crossing['redDuration'] for crossing in parent])
             all_greens.append([crossing['greenDuration'] for crossing in parent])
             all_cycles.append([crossing['cycleStartTime'] for crossing in parent])
-
 
         while len(new_population) < self.population:
             reds_selecteds = []
@@ -79,7 +71,7 @@ class GeneticAlgorithm:
         return individuals
 
     def select(self, all_results: list[SchemaProcessResults], _delta: float = 0.1):
-        #TODO: Delta precisa ser configuravel
+        # TODO: Delta precisa ser configuravel
         if not all_results:
             raise ValueError('All results is empty')
 
@@ -87,12 +79,11 @@ class GeneticAlgorithm:
         results_list.sort(key=lambda x: x['avgTime'])
 
         all_light_results = [result['lights'] for result in results_list]
-        return all_light_results[:self.selecteds]
+        return all_light_results[: self.selecteds]
 
     def objective_function(self, avg_time_delta: float, all_results: list[SchemaProcessResults]):
-
         results_list = [result.model_dump() for result in all_results]
-        results_list.sort(key=lambda x: x['resultId'], reverse=True)
+        results_list.sort(key=lambda x: x['result_id'], reverse=True)
         absolute_delta = self.get_absolute_delta(results_list)
 
         if absolute_delta < avg_time_delta:
@@ -105,11 +96,12 @@ class GeneticAlgorithm:
         window_range_half = window_range / 2
 
         window_range_1 = results_list[:window_range]
-        window_range_2 = results_list[window_range_half: window_range + window_range_half]
+        window_range_2 = results_list[window_range_half : window_range + window_range_half]
 
         avg_window_range_1 = sum(window_range_1) / len(window_range_1)
         avg_window_range_2 = sum(window_range_2) / len(window_range_2)
 
         return abs(avg_window_range_1 - avg_window_range_2)
+
 
 # 60, 57, 55, 50, 48, 45, ...

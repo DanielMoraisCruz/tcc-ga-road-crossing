@@ -1,4 +1,3 @@
-import uvicorn
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -15,8 +14,9 @@ from SqlAlchemy.database import Database, create_table, engine
 from SqlAlchemy.database_interface import DatabaseInterface
 from SqlAlchemy.models import (
     ModelCitizen,
+    ModelGeneration,
     ModelRoadCrossing,
-    ModelSimulation, ModelGeneration,
+    ModelSimulation,
 )
 
 app = FastAPI()
@@ -49,9 +49,9 @@ def create_simulation(simulation: SchemaSimulation, db: DatabaseInterface = Depe
         simulation_db = db.new_simulation_iteration(
             session,
             ModelSimulation(
-                selecteds=simulation.selecteds,
-                mutation_rate=simulation.mutationRate,
                 population=simulation.population,
+                mutation_rate=simulation.mutationRate,
+                selecteds=simulation.selecteds,
                 avg_time_delta=simulation.avgTimeDelta,
                 max_generations=simulation.maxGenerations,
                 min_generations=simulation.minGenerations,
@@ -63,23 +63,24 @@ def create_simulation(simulation: SchemaSimulation, db: DatabaseInterface = Depe
         raise HTTPException(status_code=500, detail=f'Erro ao criar simulação: {e}')
 
 
-@app.post('/simulation/process-results/{id}')
-def process_results(id: int, results: list[SchemaProcessResults], db: DatabaseInterface = Depends(get_database)):
+@app.post('/simulation/process-results/{simulation_id:int}')
+def process_results(simulation_id: int,
+                    results: list[SchemaProcessResults],
+                    db: DatabaseInterface = Depends(get_database)):
     session = db.get_session()
 
-    simulation = db.get_simulation(session, id)
+    simulation = db.get_simulation(session, simulation_id)
+    if simulation is None:
+        raise HTTPException(status_code=404, detail='Simulação não encontrada')
 
     if simulation.population != len(results):
-        raise HTTPException(status_code=500, detail=f'Resultados é maior que população registrada ao criar '
-                                                    f'a simulação: deveria ser {simulation.population} mas é {len(results)}')
+        raise HTTPException(status_code=500,
+                            detail=f'Resultados é maior que população registrada ao criar a simulação: '
+                                   f'deveria ser {simulation.population} mas é {len(results)}')
 
     generation = ModelGeneration(simulation=simulation, simulation_id=simulation.simulation_id)
 
-
     try:
-        # Salva os resultados da simulação no banco de dados
-        db.create_new_generation(session, generation)
-
         for citizen in results:
             saved_citizen = db.save_results(
                 session,
@@ -97,53 +98,56 @@ def process_results(id: int, results: list[SchemaProcessResults], db: DatabaseIn
                 db.new_road_crossing(
                     session,
                     ModelRoadCrossing(
-                    citizen_id=saved_citizen.citizen_id,
-                    red_duration=light.redDuration,
-                    green_duration=light.greenDuration,
-                    cycle_start_time=light.cycleStartTime,
-                    citizen=saved_citizen,
-                    )
+                        citizen_id=saved_citizen.citizen_id,
+                        red_duration=light.redDuration,
+                        green_duration=light.greenDuration,
+                        cycle_start_time=light.cycleStartTime,
+                        citizen=saved_citizen,
+                    ),
                 )
-
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'Erro ao salvar resultados: {e}')
 
     try:
         # Executa crossover e mutação
-
         ga = GeneticAlgorithm(
             population=simulation.population,
             selecteds=simulation.selecteds,
             mutation_rate=simulation.mutation_rate,
         )
 
-        new_population = ga.crossover(results)
-
-        if new_population is None:
-            # TODO: Implementar status DONE
+        # Critérios de parada
+        if generation.total_generations >= simulation.min_generations:
+            if ga.objective_function(simulation.avg_time_delta, results):
+                return []
+        if generation.total_generations >= simulation.max_generations:
             return []
 
+        new_population = ga.crossover(results)
+        generation.total_generations += 1
 
-        # TODO: Colocar critério de paradas aqui
-
+        # Salva os resultados da simulação no banco de dados
+        db.create_new_generation(session, generation)
+        print('Generation:', generation.total_generations)
+        print('Total de cidadãos:', len(new_population))
         return new_population
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'Erro ao processar resultados: {e}')
 
 
-@app.post('/simulation/done/{id}', response_model=SchemaDone)
+@app.post(f'/simulation/done/{id}', response_model=SchemaDone)
 def check_simulation_done(db: DatabaseInterface = Depends(get_database)):
-    session = db.get_session()
+    # session = db.get_session()
     try:
         return []
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'Erro ao verificar simulação: {e}')
 
 
-@app.post('/simulation/premature-termination/{id}')
-def premature_termination(id: int, db: DatabaseInterface = Depends(get_database)):
+@app.post(f'/simulation/premature-termination/{id}')
+def premature_termination(db: DatabaseInterface = Depends(get_database)):
     session = db.get_session()
     try:
         # Implementar lógica de término prematuro
@@ -155,7 +159,7 @@ def premature_termination(id: int, db: DatabaseInterface = Depends(get_database)
         raise HTTPException(status_code=500, detail=f'Erro ao terminar simulação: {e}')
 
 
-@app.get('/simulation/final-results/{id}', response_model=SchemaFinalResults)
+@app.get(f'/simulation/final-results/{id}', response_model=SchemaFinalResults)
 def get_final_results(id: int, db: DatabaseInterface = Depends(get_database)):
     session = db.get_session()
     try:

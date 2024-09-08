@@ -1,15 +1,14 @@
-from sqlite3 import Row
-from typing import Any, Optional, Type
-
-from SqlAlchemy.database_interface import DatabaseInterface
+from typing import Optional
 
 from settings import Settings
 from sqlalchemy import create_engine
+from SqlAlchemy.database_interface import DatabaseInterface
 from SqlAlchemy.models import (
     ModelCitizen,
+    ModelGeneration,
     ModelRoadCrossing,
     ModelSimulation,
-    table_registry, ModelGeneration,
+    table_registry,
 )
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
@@ -20,10 +19,14 @@ Base = declarative_base()
 
 
 def create_table() -> None:
-    # TODO: Criar modo de produção
-    table_registry.metadata.drop_all(bind=engine)
+    # drop_table()
     table_registry.metadata.create_all(bind=engine)
     print('Banco de dados criado com sucesso.')
+
+
+# def drop_table() -> None:
+#     table_registry.metadata.drop_all(bind=engine)
+#     print('Banco de dados deletado com sucesso.')
 
 
 class Database(DatabaseInterface):
@@ -76,7 +79,6 @@ class Database(DatabaseInterface):
     def delete_road_crossing(session: Session, id_simulation: int) -> None:
         session.query(ModelRoadCrossing).filter(ModelRoadCrossing.simulation_id == id_simulation).delete()
         session.commit()
-
 
     @staticmethod
     def create_new_generation(session: Session, generation: ModelGeneration):

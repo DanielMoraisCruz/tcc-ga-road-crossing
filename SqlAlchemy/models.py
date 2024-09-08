@@ -19,11 +19,7 @@ class ModelSimulation:
     min_generations: Mapped[int] = mapped_column(Integer, nullable=False)
 
     # Relacionamento com as gerações
-    generations: Mapped[Optional[list['ModelGeneration']]] = relationship(
-        'ModelGeneration',
-        back_populates='simulation',
-        lazy='select', init=False, default=[]
-    )
+    generations: Mapped[Optional[list['ModelGeneration']]] = relationship('ModelGeneration', back_populates='simulation', lazy='select', init=False, default=[])
 
 
 @table_registry.mapped_as_dataclass
@@ -31,17 +27,14 @@ class ModelGeneration:
     __tablename__ = 'GENERATIONS'
 
     generation_id: Mapped[Optional[int]] = mapped_column(primary_key=True, autoincrement=True, init=False)
+    total_generations: Mapped[int] = mapped_column(Integer, nullable=False, init=False, default=0)
 
     # Relacionamento com ModelSimulation
     simulation_id: Mapped[Optional[int]] = mapped_column(ForeignKey('SIMULATIONS.simulation_id'), nullable=True)
     simulation: Mapped[Optional['ModelSimulation']] = relationship('ModelSimulation', lazy='select')
 
     # Relacionamento com os cidadãos
-    citizens: Mapped[Optional[list['ModelCitizen']]] = relationship(
-        'ModelCitizen',
-        back_populates='generation',
-        lazy='select', init=False, default=[]
-    )
+    citizens: Mapped[Optional[list['ModelCitizen']]] = relationship('ModelCitizen', back_populates='generation', lazy='select', init=False, default=[])
 
 
 @table_registry.mapped_as_dataclass
@@ -60,11 +53,7 @@ class ModelCitizen:
     generation: Mapped[Optional['ModelGeneration']] = relationship('ModelGeneration', lazy='select')
 
     # Relacionamento com os cruzamentos
-    road_crossings: Mapped[Optional[list['ModelRoadCrossing']]] = relationship(
-        'ModelRoadCrossing',
-        back_populates='citizen',
-        lazy='select', init=False, default=[]
-    )
+    road_crossings: Mapped[Optional[list['ModelRoadCrossing']]] = relationship('ModelRoadCrossing', back_populates='citizen', lazy='select', init=False, default=[])
 
 
 @table_registry.mapped_as_dataclass

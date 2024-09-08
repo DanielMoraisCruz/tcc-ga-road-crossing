@@ -2,8 +2,9 @@ from typing import List, Optional
 
 from SqlAlchemy.models import (
     ModelCitizen,
+    ModelGeneration,
     ModelRoadCrossing,
-    ModelSimulation, ModelGeneration,
+    ModelSimulation,
 )
 from sqlalchemy.orm import Session
 
