@@ -1,10 +1,9 @@
 from typing import List, Optional
 
 from SqlAlchemy.models import (
-    ModelConfigAlgGen,
-    ModelResults,
+    ModelCitizen,
     ModelRoadCrossing,
-    ModelSimulationIteration,
+    ModelSimulation, ModelGeneration,
 )
 from sqlalchemy.orm import Session
 
@@ -17,11 +16,7 @@ class DatabaseInterface:
         raise NotImplementedError
 
     @staticmethod
-    def save_config_alg_gen(session: Session, config_alg_gen: ModelConfigAlgGen) -> ModelConfigAlgGen:
-        raise NotImplementedError
-
-    @staticmethod
-    def new_simulation_iteration(session: Session, simulation_iteration: ModelSimulationIteration) -> ModelSimulationIteration:
+    def new_simulation_iteration(session: Session, simulation_iteration: ModelSimulation) -> ModelSimulation:
         raise NotImplementedError
 
     @staticmethod
@@ -29,19 +24,11 @@ class DatabaseInterface:
         raise NotImplementedError
 
     @staticmethod
-    def get_simulation_iteration(session: Session, id_simulation: int) -> Optional[ModelSimulationIteration]:
+    def save_results(session: Session, results: ModelCitizen) -> ModelCitizen:
         raise NotImplementedError
 
     @staticmethod
-    def get_config_alg_gen(session: Session, id_simulation: int) -> Optional[ModelConfigAlgGen]:
-        raise NotImplementedError
-
-    @staticmethod
-    def save_results(session: Session, results: ModelResults) -> None:
-        raise NotImplementedError
-
-    @staticmethod
-    def get_results(session: Session, id_simulation: int) -> List[ModelResults]:
+    def get_results(session: Session, id_simulation: int) -> List[ModelCitizen]:
         raise NotImplementedError
 
     @staticmethod
@@ -53,5 +40,13 @@ class DatabaseInterface:
         raise NotImplementedError
 
     @staticmethod
-    def get_simulation(session: Session, id_simulation: int) -> Optional[ModelSimulationIteration]:
+    def get_simulation(session: Session, id_simulation: int) -> Optional[ModelSimulation]:
+        raise NotImplementedError
+
+    @staticmethod
+    def delete_road_crossing(session: Session, id_simulation: int) -> None:
+        raise NotImplementedError
+
+    @staticmethod
+    def create_new_generation(session: Session, generation: ModelGeneration) -> ModelGeneration:
         raise NotImplementedError

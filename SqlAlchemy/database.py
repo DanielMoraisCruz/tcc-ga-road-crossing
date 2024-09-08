@@ -6,11 +6,10 @@ from SqlAlchemy.database_interface import DatabaseInterface
 from settings import Settings
 from sqlalchemy import create_engine
 from SqlAlchemy.models import (
-    ModelConfigAlgGen,
-    ModelResults,
+    ModelCitizen,
     ModelRoadCrossing,
-    ModelSimulationIteration,
-    table_registry,
+    ModelSimulation,
+    table_registry, ModelGeneration,
 )
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
@@ -21,6 +20,8 @@ Base = declarative_base()
 
 
 def create_table() -> None:
+    # TODO: Criar modo de produção
+    table_registry.metadata.drop_all(bind=engine)
     table_registry.metadata.create_all(bind=engine)
     print('Banco de dados criado com sucesso.')
 
@@ -33,13 +34,7 @@ class Database(DatabaseInterface):
         return Session(self.engine)
 
     @staticmethod
-    def save_config_alg_gen(session: Session, config_alg_gen: ModelConfigAlgGen) -> ModelConfigAlgGen:
-        session.add(config_alg_gen)
-        session.commit()
-        return config_alg_gen
-
-    @staticmethod
-    def new_simulation_iteration(session: Session, simulation_iteration: ModelSimulationIteration) -> ModelSimulationIteration:
+    def new_simulation_iteration(session: Session, simulation_iteration: ModelSimulation) -> ModelSimulation:
         session.add(simulation_iteration)
         session.commit()
         return simulation_iteration
@@ -51,38 +46,40 @@ class Database(DatabaseInterface):
         return road_crossing
 
     @staticmethod
-    def get_simulation_iteration(session: Session, id_simulation: int) -> Optional[ModelSimulationIteration]:
-        return session.query(ModelSimulationIteration).filter(ModelSimulationIteration.simulationId == id_simulation).first()
-
-    @staticmethod
-    def get_config_alg_gen(session: Session, id_simulation: int) -> Optional[ModelConfigAlgGen]:
-        return session.query(ModelConfigAlgGen).filter(ModelConfigAlgGen.configId == id_simulation).first()
-
-    @staticmethod
-    def save_results(session: Session, results: ModelResults) -> None:
+    def save_results(session: Session, results: ModelCitizen) -> ModelCitizen:
         session.add(results)
         session.commit()
+        return results
 
     @staticmethod
     def get_results(session: Session, id_simulation: int) -> list:
-        return session.query(ModelResults).filter(ModelResults.simulation_id == id_simulation).all()
+        return session.query(ModelCitizen).filter(ModelCitizen.simulation_id == id_simulation).all()
 
     @staticmethod
     def get_road_crossings(session: Session, id_simulation: int) -> list:
         return session.query(ModelRoadCrossing).filter(ModelRoadCrossing.simulation_id == id_simulation).all()
 
-    @staticmethod
-    def get_road_crossing_no_id(session: Session, id_simulation: int) -> list:
-        return (
-            session.query(ModelRoadCrossing)
-            .filter(ModelRoadCrossing.simulation_id == id_simulation)
-            .with_entities(
-                ModelRoadCrossing.redDuration,
-                ModelRoadCrossing.greenDuration,
-                ModelRoadCrossing.cycleStartTime,
-            )
-            .all()
-        )
+    # @staticmethod
+    # def get_road_crossing_no_id(session: Session, id_simulation: int) -> list:
+    #     simulation = session.query(ModelRoadCrossing).filter(ModelRoadCrossing.simulation_id == id_simulation).all()
+    #     lights_to_return = []
+    #     for citizen in simulation:
+    #         for lights in citizen:
+    #             lights_to_return.append(lights)
+    #     return lights_to_return
 
-    def get_simulation(session: Session, id_simulation: int) -> Optional[ModelSimulationIteration]:
-        return session.query(ModelSimulationIteration).filter(ModelSimulationIteration.simulationId == id_simulation).first()
+    @staticmethod
+    def get_simulation(session: Session, id_simulation: int) -> Optional[ModelSimulation]:
+        return session.query(ModelSimulation).filter(ModelSimulation.simulation_id == id_simulation).first()
+
+    @staticmethod
+    def delete_road_crossing(session: Session, id_simulation: int) -> None:
+        session.query(ModelRoadCrossing).filter(ModelRoadCrossing.simulation_id == id_simulation).delete()
+        session.commit()
+
+
+    @staticmethod
+    def create_new_generation(session: Session, generation: ModelGeneration):
+        session.add(generation)
+        session.commit()
+        return generation

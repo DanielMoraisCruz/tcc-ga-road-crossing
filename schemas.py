@@ -12,6 +12,7 @@ class SchemaSimulation(BaseModel):
     population: int
     mutationRate: float
     selecteds: int
+
     minGenerations: int
     maxGenerations: int
     avgTimeDelta: float
@@ -28,20 +29,12 @@ class SchemaBaseRoadCrossing(BaseModel):
 
 
 class SchemaProcessResults(BaseModel):
-    """
-    POST /simulation/process-results/{id} [processa resultados da geração]
-        Back recebe array de avgTime, carsTotal, simulatedTime, avgSpeed,
-        occupationRate, lights[], iterateNext
-        Front recebe lights[]
-    """
-
     avgTime: float
     carsTotal: int
-    simulatedTime: int
+    simulatedTime: float
     avgSpeed: float
     occupationRate: float
     lights: list[SchemaBaseRoadCrossing]
-    iterateNext: bool
 
 
 class SchemaDone(BaseModel):
