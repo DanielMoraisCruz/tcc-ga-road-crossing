@@ -1,11 +1,9 @@
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import joinedload, subqueryload
 
 from genetic_algorithm import GeneticAlgorithm
 from schemas import (
-    SchemaAll,
-    SchemaDone,
-    SchemaFinalResults,
     SchemaProcessResults,
     SchemaReturnSimulation,
     SchemaSimulation,
@@ -78,7 +76,7 @@ def process_results(simulation_id: int,
                             detail=f'Resultados é maior que população registrada ao criar a simulação: '
                                    f'deveria ser {simulation.population} mas é {len(results)}')
 
-    generation = ModelGeneration(simulation=simulation, simulation_id=simulation.simulation_id)
+    generation = ModelGeneration(simulation_id=simulation.simulation_id)
 
     try:
         for citizen in results:
@@ -86,7 +84,6 @@ def process_results(simulation_id: int,
                 session,
                 ModelCitizen(
                     generation_id=generation.generation_id,
-                    generation=generation,
                     duration=citizen.simulatedTime,
                     trip_avg=citizen.avgTime,
                     occupation_rate=citizen.occupationRate,
@@ -102,7 +99,6 @@ def process_results(simulation_id: int,
                         red_duration=light.redDuration,
                         green_duration=light.greenDuration,
                         cycle_start_time=light.cycleStartTime,
-                        citizen=saved_citizen,
                     ),
                 )
 
@@ -118,18 +114,17 @@ def process_results(simulation_id: int,
         )
 
         # Critérios de parada
-        if generation.total_generations >= simulation.min_generations:
+        print('Gerações na simulação: ', len(simulation.generations))
+        if len(simulation.generations) >= simulation.min_generations:
             if ga.objective_function(simulation.avg_time_delta, results):
                 return []
-        if generation.total_generations >= simulation.max_generations:
+        if len(simulation.generations) >= simulation.max_generations:
             return []
 
         new_population = ga.crossover(results)
-        generation.total_generations += 1
 
         # Salva os resultados da simulação no banco de dados
         db.create_new_generation(session, generation)
-        print('Generation:', generation.total_generations)
         print('Total de cidadãos:', len(new_population))
         return new_population
 
@@ -137,46 +132,37 @@ def process_results(simulation_id: int,
         raise HTTPException(status_code=500, detail=f'Erro ao processar resultados: {e}')
 
 
-@app.post(f'/simulation/done/{id}', response_model=SchemaDone)
-def check_simulation_done(db: DatabaseInterface = Depends(get_database)):
-    # session = db.get_session()
-    try:
-        return []
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f'Erro ao verificar simulação: {e}')
-
-
-@app.post(f'/simulation/premature-termination/{id}')
-def premature_termination(db: DatabaseInterface = Depends(get_database)):
-    session = db.get_session()
-    try:
-        # Implementar lógica de término prematuro
-        # Por exemplo, remover a simulação do banco de dados
-        session.query(ModelSimulation).filter_by(simulationId=id).delete()
-        session.commit()
-        return {'status': 'success'}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f'Erro ao terminar simulação: {e}')
-
-
-@app.get(f'/simulation/final-results/{id}', response_model=SchemaFinalResults)
+@app.get('/simulation/final-results/{id}', response_model=ModelSimulation)
 def get_final_results(id: int, db: DatabaseInterface = Depends(get_database)):
     session = db.get_session()
     try:
-        results = session.query(ModelSimulation).filter_by(simulationId=id).first()
-        if results:
-            return results  # Adaptar para o modelo de SchemaFinalResults conforme necessário
+        result = (
+            session.query(ModelSimulation)
+            .options(
+                # Start from ModelSimulation, and load generations
+                subqueryload(ModelSimulation.generations)  # Load generations
+                .subqueryload(ModelGeneration.citizens)  # Load citizens in each generation
+                .subqueryload(ModelCitizen.road_crossings)
+            )
+            .filter_by(simulation_id=id)
+            .first()
+        )
+        if result:
+            return result
         else:
             raise HTTPException(status_code=404, detail='Resultados não encontrados')
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'Erro ao buscar resultados: {e}')
+    finally:
+        session.close()
 
 
-@app.get('/simulation/all', response_model=SchemaAll)
+@app.get('/simulation/all', response_model=list[ModelSimulation])
 def get_all_simulations(db: DatabaseInterface = Depends(get_database)):
     session = db.get_session()
     try:
-        simulations = session.query(ModelSimulation).all()
-        return simulations  # Adaptar para o modelo de SchemaAll conforme necessário
+        return (session.query(ModelSimulation)
+                .order_by(ModelSimulation.simulation_id)
+                .all())  # Adaptar para o modelo de SchemaAll conforme necessário
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'Erro ao buscar todas simulações: {e}')

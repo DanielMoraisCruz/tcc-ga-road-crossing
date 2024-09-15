@@ -4,7 +4,7 @@ from typing import List
 from random_generator import RandomGenerator
 from random_interface import RandomInterface
 from schemas import SchemaProcessResults
-
+from SqlAlchemy.loggings import Log
 
 class GeneticAlgorithm:
     def __init__(self, population: int, selecteds: int = 2, mutation_rate: float = 0.1):
@@ -12,6 +12,7 @@ class GeneticAlgorithm:
         self.mutation_rate: float = mutation_rate
         self.selecteds: int = selecteds
         self.random_generator: RandomInterface = RandomGenerator()
+        self.log = Log("best_citzen_avg_time")
 
     def crossover(self, results_returned: list[SchemaProcessResults]):
         if not results_returned:
@@ -77,13 +78,17 @@ class GeneticAlgorithm:
 
         results_list = [result.model_dump() for result in all_results]
         results_list.sort(key=lambda x: x['avgTime'])
+        citizen_to_log = results_list[0]
+        self.log.log_info(citizen_to_log)
 
         all_light_results = [result['lights'] for result in results_list]
-        return all_light_results[: self.selecteds]
+        selected_citizens_lights = all_light_results[: self.selecteds]
+
+        return selected_citizens_lights
 
     def objective_function(self, avg_time_delta: float, all_results: list[SchemaProcessResults]):
         results_list = [result.model_dump() for result in all_results]
-        results_list.sort(key=lambda x: x['result_id'], reverse=True)
+        results_list.reverse()
         absolute_delta = self.get_absolute_delta(results_list)
 
         if absolute_delta < avg_time_delta:
@@ -93,13 +98,20 @@ class GeneticAlgorithm:
     @staticmethod
     def get_absolute_delta(results_list: list):
         window_range = 4
-        window_range_half = window_range / 2
+        window_range_half = int(window_range / 2)
+        window_with_offset = window_range + window_range_half
+
+
+        if len(results_list) < window_with_offset:
+            window_range = 2
+            window_range_half = 1
+            window_with_offset = window_range + window_range_half
 
         window_range_1 = results_list[:window_range]
-        window_range_2 = results_list[window_range_half : window_range + window_range_half]
+        window_range_2 = results_list[window_range_half : window_with_offset]
 
-        avg_window_range_1 = sum(window_range_1) / len(window_range_1)
-        avg_window_range_2 = sum(window_range_2) / len(window_range_2)
+        avg_window_range_1 = sum(wr1['avgTime'] for wr1 in window_range_1) / len(window_range_1)
+        avg_window_range_2 = sum(wr2['avgTime'] for wr2 in window_range_2) / len(window_range_2)
 
         return abs(avg_window_range_1 - avg_window_range_2)
 
