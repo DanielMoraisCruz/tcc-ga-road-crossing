@@ -1,6 +1,6 @@
 from typing import Optional
 
-from sqlalchemy import Float, ForeignKey, Integer
+from sqlalchemy import Float, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, registry, relationship
 
 table_registry = registry()
@@ -17,6 +17,7 @@ class ModelSimulation:
     avg_time_delta: Mapped[float] = mapped_column(Float, nullable=False)
     max_generations: Mapped[int] = mapped_column(Integer, nullable=False)
     min_generations: Mapped[int] = mapped_column(Integer, nullable=False)
+    mutation_method: Mapped[str] = mapped_column(String, nullable=False)
 
     # Relacionamento com as gerações
     generations: Mapped[Optional[list['ModelGeneration']]] = relationship('ModelGeneration', lazy='select', init=False, default=[])
@@ -33,7 +34,7 @@ class ModelGeneration:
     # simulation: Mapped[Optional['ModelSimulation']] = relationship('ModelSimulation', lazy='select')
 
     # Relacionamento com os cidadãos
-    citizens: Mapped[Optional[list['ModelCitizen']]] = relationship('ModelCitizen', lazy='select', init=False, default=[])
+    citizens: Mapped[Optional[list['ModelCitizen']]] = relationship('ModelCitizen', lazy='subquery', init=False, default=[])
 
 
 @table_registry.mapped_as_dataclass
@@ -52,7 +53,7 @@ class ModelCitizen:
     # generation: Mapped[Optional['ModelGeneration']] = relationship('ModelGeneration', lazy='select')
 
     # Relacionamento com os cruzamentos
-    road_crossings: Mapped[Optional[list['ModelRoadCrossing']]] = relationship('ModelRoadCrossing', lazy='select', init=False, default=[])
+    road_crossings: Mapped[Optional[list['ModelRoadCrossing']]] = relationship('ModelRoadCrossing', lazy='subquery', init=False, default=[])
 
 
 @table_registry.mapped_as_dataclass

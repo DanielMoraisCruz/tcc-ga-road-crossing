@@ -1,4 +1,6 @@
 # genetic_algorithm.py
+import math
+import random
 from typing import List
 
 from random_generator import RandomGenerator
@@ -7,12 +9,13 @@ from schemas import SchemaProcessResults
 from SqlAlchemy.loggings import Log
 
 class GeneticAlgorithm:
-    def __init__(self, population: int, selecteds: int = 2, mutation_rate: float = 0.1):
+    def __init__(self, mutation_method: str, population: int, selecteds: int = 2, mutation_rate: float = 0.1):
         self.population: int = population
         self.mutation_rate: float = mutation_rate
         self.selecteds: int = selecteds
         self.random_generator: RandomInterface = RandomGenerator()
         self.log = Log("best_citzen_avg_time")
+        self.mutation_method: str = mutation_method
 
     def crossover(self, results_returned: list[SchemaProcessResults]):
         if not results_returned:
@@ -53,7 +56,13 @@ class GeneticAlgorithm:
 
             new_population.append(_light)
 
-        new_population = self.mutate(new_population)
+        if self.mutation_method == 'rim':
+            new_population = self.random_individual_based_mutation(new_population)
+        elif self.mutation_method == 'pbm':
+            new_population = self.probability_based_mutation(new_population)
+        else:
+            raise ValueError('Método de mutação não foi parametrizado corretamente')
+
         new_population = new_population[: -self.selecteds]
 
         for parent in parents:
@@ -61,15 +70,31 @@ class GeneticAlgorithm:
 
         return new_population
 
-    def mutate(self, individuals):
-        for citizen in individuals:
-            random_nun = self.random_generator.random()
+    def random_individual_based_mutation(self, generation):
+        gen_length = len(generation)
+        mutated_qty = math.floor(gen_length * self.mutation_rate)
+
+        num_replacements = mutated_qty
+        random_positions = random.sample(range(len(generation)), num_replacements)
+        for pos in random_positions:
+            citizen = generation[pos]
             for semaphore in citizen:
+                semaphore['redDuration'] = self.random_generator.randint(15, 75)
+                semaphore['greenDuration'] = self.random_generator.randint(15, 75)
+                # ciclo max tem que ser max de red ou green
+                semaphore['cycleStartTime'] = self.random_generator.randint(0, 75)
+
+        return generation
+
+    def probability_based_mutation(self, generation):
+        for individual in generation:
+            random_nun = self.random_generator.random()
+            for semaphore in individual:
                 if random_nun < self.mutation_rate:
                     semaphore['redDuration'] = self.random_generator.randint(15, 75)
                     semaphore['greenDuration'] = self.random_generator.randint(15, 75)
-                    semaphore['cycleStartTime'] = self.random_generator.randint(0, 120)
-        return individuals
+                    semaphore['cycleStartTime'] = self.random_generator.randint(0, 75)
+        return generation
 
     def select(self, all_results: list[SchemaProcessResults], _delta: float = 0.1):
         # TODO: Delta precisa ser configuravel

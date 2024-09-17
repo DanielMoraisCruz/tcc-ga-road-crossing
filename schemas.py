@@ -16,6 +16,7 @@ class SchemaSimulation(BaseModel):
     minGenerations: int
     maxGenerations: int
     avgTimeDelta: float
+    mutationMethod: str # 'rim' ou 'pbm'
 
 
 class SchemaReturnSimulation(BaseModel):

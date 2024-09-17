@@ -53,6 +53,7 @@ def create_simulation(simulation: SchemaSimulation, db: DatabaseInterface = Depe
                 avg_time_delta=simulation.avgTimeDelta,
                 max_generations=simulation.maxGenerations,
                 min_generations=simulation.minGenerations,
+                mutation_method=simulation.mutationMethod,
             ),
         )
 
@@ -77,6 +78,8 @@ def process_results(simulation_id: int,
                                    f'deveria ser {simulation.population} mas é {len(results)}')
 
     generation = ModelGeneration(simulation_id=simulation.simulation_id)
+    session.add(generation)
+    session.flush()
 
     try:
         for citizen in results:
@@ -108,6 +111,7 @@ def process_results(simulation_id: int,
     try:
         # Executa crossover e mutação
         ga = GeneticAlgorithm(
+            mutation_method=simulation.mutation_method,
             population=simulation.population,
             selecteds=simulation.selecteds,
             mutation_rate=simulation.mutation_rate,
@@ -124,7 +128,7 @@ def process_results(simulation_id: int,
         new_population = ga.crossover(results)
 
         # Salva os resultados da simulação no banco de dados
-        db.create_new_generation(session, generation)
+        session.commit()
         print('Total de cidadãos:', len(new_population))
         return new_population
 
