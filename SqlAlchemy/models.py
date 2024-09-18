@@ -1,6 +1,7 @@
+from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Float, ForeignKey, Integer, String
+from sqlalchemy import Float, ForeignKey, Integer, String, DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column, registry, relationship
 
 table_registry = registry()
@@ -19,7 +20,7 @@ class ModelSimulation:
     min_generations: Mapped[int] = mapped_column(Integer, nullable=False)
     mutation_method: Mapped[str] = mapped_column(String, nullable=False)
 
-    # Relacionamento com as gerações
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), server_default=func.now(), nullable=False)
     generations: Mapped[Optional[list['ModelGeneration']]] = relationship('ModelGeneration', lazy='select', init=False, default=[])
 
 
@@ -31,10 +32,13 @@ class ModelGeneration:
 
     # Relacionamento com ModelSimulation
     simulation_id: Mapped[Optional[int]] = mapped_column(ForeignKey('SIMULATIONS.simulation_id'), nullable=True)
+
+    citizens: Mapped[Optional[list['ModelCitizen']]] = relationship('ModelCitizen', lazy='subquery', init=False, default=[])
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), server_default=func.now(), nullable=False)
+
+
     # simulation: Mapped[Optional['ModelSimulation']] = relationship('ModelSimulation', lazy='select')
 
-    # Relacionamento com os cidadãos
-    citizens: Mapped[Optional[list['ModelCitizen']]] = relationship('ModelCitizen', lazy='subquery', init=False, default=[])
 
 
 @table_registry.mapped_as_dataclass
@@ -48,11 +52,10 @@ class ModelCitizen:
     vehicles_total: Mapped[int] = mapped_column(Integer, nullable=False)
     average_speed: Mapped[float] = mapped_column(Float, nullable=False)
 
-    # Relacionamento com a geração
     generation_id: Mapped[Optional[int]] = mapped_column(ForeignKey('GENERATIONS.generation_id'), nullable=True)
     # generation: Mapped[Optional['ModelGeneration']] = relationship('ModelGeneration', lazy='select')
 
-    # Relacionamento com os cruzamentos
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), server_default=func.now(), nullable=False)
     road_crossings: Mapped[Optional[list['ModelRoadCrossing']]] = relationship('ModelRoadCrossing', lazy='subquery', init=False, default=[])
 
 
@@ -60,12 +63,13 @@ class ModelCitizen:
 class ModelRoadCrossing:
     __tablename__ = 'ROAD_CROSSING'
 
-    road_crossing_id: Mapped[Optional[int]] = mapped_column(primary_key=True, autoincrement=True, init=False)
 
     red_duration: Mapped[int] = mapped_column(Integer, nullable=False)
     green_duration: Mapped[int] = mapped_column(Integer, nullable=False)
     cycle_start_time: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    # Relacionamento com ModelCitizen
     citizen_id: Mapped[Optional[int]] = mapped_column(ForeignKey('CITIZENS.citizen_id'), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), server_default=func.now(), nullable=False)
+    road_crossing_id: Mapped[Optional[int]] = mapped_column(primary_key=True, autoincrement=True, init=False)
+
     # citizen: Mapped[Optional['ModelCitizen']] = relationship('ModelCitizen', lazy='select')

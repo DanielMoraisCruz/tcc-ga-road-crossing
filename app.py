@@ -1,13 +1,7 @@
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import joinedload, subqueryload
+from sqlalchemy.orm import subqueryload
 
-from genetic_algorithm import GeneticAlgorithm
-from schemas import (
-    SchemaProcessResults,
-    SchemaReturnSimulation,
-    SchemaSimulation,
-)
 from SqlAlchemy.database import Database, create_table, engine
 from SqlAlchemy.database_interface import DatabaseInterface
 from SqlAlchemy.models import (
@@ -15,6 +9,12 @@ from SqlAlchemy.models import (
     ModelGeneration,
     ModelRoadCrossing,
     ModelSimulation,
+)
+from dto.response_models import ModelSimulationResponse, ModelRoadCrossingResponse, SimulationCreateResponse
+from genetic_algorithm import GeneticAlgorithm
+from schemas import (
+    SchemaProcessResults,
+    SchemaSimulation,
 )
 
 app = FastAPI()
@@ -40,7 +40,7 @@ def get_database() -> DatabaseInterface:
     return Database(engine)
 
 
-@app.post('/simulation/create', response_model=SchemaReturnSimulation)
+@app.post('/simulation/create', response_model=SimulationCreateResponse)
 def create_simulation(simulation: SchemaSimulation, db: DatabaseInterface = Depends(get_database)):
     session = db.get_session()
     try:
@@ -62,7 +62,7 @@ def create_simulation(simulation: SchemaSimulation, db: DatabaseInterface = Depe
         raise HTTPException(status_code=500, detail=f'Erro ao criar simulação: {e}')
 
 
-@app.post('/simulation/process-results/{simulation_id:int}')
+@app.post('/simulation/process-results/{simulation_id:int}', response_model=list[list[ModelRoadCrossingResponse]])
 def process_results(simulation_id: int,
                     results: list[SchemaProcessResults],
                     db: DatabaseInterface = Depends(get_database)):
@@ -136,7 +136,7 @@ def process_results(simulation_id: int,
         raise HTTPException(status_code=500, detail=f'Erro ao processar resultados: {e}')
 
 
-@app.get('/simulation/final-results/{id}', response_model=ModelSimulation)
+@app.get('/simulation/final-results/{id}', response_model=ModelSimulationResponse)
 def get_final_results(id: int, db: DatabaseInterface = Depends(get_database)):
     session = db.get_session()
     try:
@@ -161,7 +161,7 @@ def get_final_results(id: int, db: DatabaseInterface = Depends(get_database)):
         session.close()
 
 
-@app.get('/simulation/all', response_model=list[ModelSimulation])
+@app.get('/simulation/all', response_model=list[ModelSimulationResponse])
 def get_all_simulations(db: DatabaseInterface = Depends(get_database)):
     session = db.get_session()
     try:
