@@ -3,10 +3,36 @@ import math
 import random
 from typing import List
 
+from SqlAlchemy.models import ModelGeneration
 from random_generator import RandomGenerator
 from random_interface import RandomInterface
 from schemas import SchemaProcessResults
 from SqlAlchemy.loggings import Log
+
+
+def get_best_results_from_generations(generations: list[ModelGeneration]):
+    best_results = []
+    for generation in generations:
+        best_citizen = min(generation.citizens, key=lambda c: c.trip_avg)
+        best_results.append({
+            'avgTime': best_citizen.trip_avg,
+            'simulatedTime': best_citizen.duration,
+            'occupationRate': best_citizen.occupation_rate,
+            'carsTotal': best_citizen.vehicles_total,
+            'avgSpeed': best_citizen.average_speed,
+        })
+    return best_results
+
+
+def get_min_generations_required():
+    """
+    Determine the minimum number of generations needed to calculate the moving average.
+    """
+    window_range = 4
+    window_range_half = int(window_range / 2)
+    window_with_offset = window_range + window_range_half
+    return window_with_offset
+
 
 class GeneticAlgorithm:
     def __init__(self, mutation_method: str, population: int, selecteds: int = 2, mutation_rate: float = 0.1):
@@ -111,11 +137,23 @@ class GeneticAlgorithm:
 
         return selected_citizens_lights
 
-    def objective_function(self, avg_time_delta: float, all_results: list[SchemaProcessResults]):
-        results_list = [result.model_dump() for result in all_results]
-        results_list.reverse()
-        absolute_delta = self.get_absolute_delta(results_list)
+    def objective_function(self, avg_time_delta: float, recent_generations: list[ModelGeneration]):
+        """
+        Evaluate if the simulation should stop based on the moving average of recent generations' best results.
+        Fetch generations from the database by simulation_id.
+        """
 
+        # Ensure we have enough generations to apply the moving average window
+        if len(recent_generations) < get_min_generations_required():
+            return False
+
+        # Gather the best results from each generation
+        best_results = get_best_results_from_generations(recent_generations)
+
+        # Calculate the absolute delta of the moving average
+        absolute_delta = self.get_absolute_delta(best_results)
+
+        # Check if the change in the average is below the threshold
         if absolute_delta < avg_time_delta:
             return True
         return False
@@ -126,19 +164,12 @@ class GeneticAlgorithm:
         window_range_half = int(window_range / 2)
         window_with_offset = window_range + window_range_half
 
-
-        if len(results_list) < window_with_offset:
-            window_range = 2
-            window_range_half = 1
-            window_with_offset = window_range + window_range_half
-
-        window_range_1 = results_list[:window_range]
-        window_range_2 = results_list[window_range_half : window_with_offset]
+        window_range_1 = results_list[-window_range:]
+        window_range_2 = results_list[-window_with_offset:-window_range_half]
 
         avg_window_range_1 = sum(wr1['avgTime'] for wr1 in window_range_1) / len(window_range_1)
         avg_window_range_2 = sum(wr2['avgTime'] for wr2 in window_range_2) / len(window_range_2)
 
         return abs(avg_window_range_1 - avg_window_range_2)
-
 
 # 60, 57, 55, 50, 48, 45, ...

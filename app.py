@@ -120,7 +120,7 @@ def process_results(simulation_id: int,
         # Critérios de parada
         print('Gerações na simulação: ', len(simulation.generations))
         if len(simulation.generations) >= simulation.min_generations:
-            if ga.objective_function(simulation.avg_time_delta, results):
+            if ga.objective_function(simulation.avg_time_delta, simulation.generations):
                 return []
         if len(simulation.generations) >= simulation.max_generations:
             return []
