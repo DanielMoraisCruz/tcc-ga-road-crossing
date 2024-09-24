@@ -2,17 +2,17 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import subqueryload
 
-from SqlAlchemy.database import Database, create_table, engine
-from SqlAlchemy.database_interface import DatabaseInterface
-from SqlAlchemy.models import (
+from DataBase.database import Database, create_table, engine
+from DataBase.database_interface import DatabaseInterface
+from GeneticAlgorithm.genetic_algorithm import GeneticAlgorithm
+from Models.models import (
     ModelCitizen,
     ModelGeneration,
     ModelRoadCrossing,
     ModelSimulation,
 )
-from dto.response_models import ModelSimulationResponse, ModelRoadCrossingResponse, SimulationCreateResponse
-from genetic_algorithm import GeneticAlgorithm
-from schemas import (
+from Models.response_models import ModelRoadCrossingResponse, ModelSimulationResponse, SimulationCreateResponse
+from Models.schemas import (
     SchemaProcessResults,
     SchemaSimulation,
 )
@@ -63,9 +63,7 @@ def create_simulation(simulation: SchemaSimulation, db: DatabaseInterface = Depe
 
 
 @app.post('/simulation/process-results/{simulation_id:int}', response_model=list[list[ModelRoadCrossingResponse]])
-def process_results(simulation_id: int,
-                    results: list[SchemaProcessResults],
-                    db: DatabaseInterface = Depends(get_database)):
+def process_results(simulation_id: int, results: list[SchemaProcessResults], db: DatabaseInterface = Depends(get_database)):
     session = db.get_session()
 
     simulation = db.get_simulation(session, simulation_id)
@@ -73,9 +71,7 @@ def process_results(simulation_id: int,
         raise HTTPException(status_code=404, detail='Simulação não encontrada')
 
     if simulation.population != len(results):
-        raise HTTPException(status_code=500,
-                            detail=f'Resultados é maior que população registrada ao criar a simulação: '
-                                   f'deveria ser {simulation.population} mas é {len(results)}')
+        raise HTTPException(status_code=500, detail=f'Resultados é maior que população registrada ao criar a simulação: ' f'deveria ser {simulation.population} mas é {len(results)}')
 
     generation = ModelGeneration(simulation_id=simulation.simulation_id)
     session.add(generation)
@@ -165,8 +161,6 @@ def get_final_results(id: int, db: DatabaseInterface = Depends(get_database)):
 def get_all_simulations(db: DatabaseInterface = Depends(get_database)):
     session = db.get_session()
     try:
-        return (session.query(ModelSimulation)
-                .order_by(ModelSimulation.simulation_id)
-                .all())  # Adaptar para o modelo de SchemaAll conforme necessário
+        return session.query(ModelSimulation).order_by(ModelSimulation.simulation_id).all()  # Adaptar para o modelo de SchemaAll conforme necessário
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'Erro ao buscar todas simulações: {e}')

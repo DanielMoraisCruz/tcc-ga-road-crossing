@@ -1,16 +1,17 @@
 from typing import Optional
 
-from settings import Settings
 from sqlalchemy import create_engine
-from SqlAlchemy.database_interface import DatabaseInterface
-from SqlAlchemy.models import (
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
+
+from DataBase.database_interface import DatabaseInterface
+from Models.models import (
     ModelCitizen,
     ModelGeneration,
     ModelRoadCrossing,
     ModelSimulation,
     table_registry,
 )
-from sqlalchemy.orm import Session, declarative_base, sessionmaker
+from settings import Settings
 
 engine = create_engine(Settings().DATABASE_URL, connect_args={'check_same_thread': False})
 
@@ -22,11 +23,6 @@ def create_table() -> None:
     # drop_table()
     table_registry.metadata.create_all(bind=engine)
     print('Banco de dados criado com sucesso.')
-
-
-# def drop_table() -> None:
-#     table_registry.metadata.drop_all(bind=engine)
-#     print('Banco de dados deletado com sucesso.')
 
 
 class Database(DatabaseInterface):
@@ -61,15 +57,6 @@ class Database(DatabaseInterface):
     @staticmethod
     def get_road_crossings(session: Session, id_simulation: int) -> list:
         return session.query(ModelRoadCrossing).filter(ModelRoadCrossing.simulation_id == id_simulation).all()
-
-    # @staticmethod
-    # def get_road_crossing_no_id(session: Session, id_simulation: int) -> list:
-    #     simulation = session.query(ModelRoadCrossing).filter(ModelRoadCrossing.simulation_id == id_simulation).all()
-    #     lights_to_return = []
-    #     for citizen in simulation:
-    #         for lights in citizen:
-    #             lights_to_return.append(lights)
-    #     return lights_to_return
 
     @staticmethod
     def get_simulation(session: Session, id_simulation: int) -> Optional[ModelSimulation]:

@@ -1,18 +1,16 @@
 from typing import List, Optional
 
-from SqlAlchemy.models import (
+from sqlalchemy.orm import Session
+
+from Models.models import (
     ModelCitizen,
     ModelGeneration,
     ModelRoadCrossing,
     ModelSimulation,
 )
-from sqlalchemy.orm import Session
 
 
 class DatabaseInterface:
-    def create_table(self) -> None:
-        raise NotImplementedError
-
     def get_session(self) -> Session:
         raise NotImplementedError
 

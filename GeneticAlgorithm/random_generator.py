@@ -1,6 +1,6 @@
 import random
 
-from random_interface import RandomInterface
+from GeneticAlgorithm.random_interface import RandomInterface
 
 
 class RandomGenerator(RandomInterface):

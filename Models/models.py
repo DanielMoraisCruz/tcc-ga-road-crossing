@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Float, ForeignKey, Integer, String, DateTime, func
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, registry, relationship
 
 table_registry = registry()
@@ -36,9 +36,7 @@ class ModelGeneration:
     citizens: Mapped[Optional[list['ModelCitizen']]] = relationship('ModelCitizen', lazy='subquery', init=False, default=[])
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), server_default=func.now(), nullable=False)
 
-
     # simulation: Mapped[Optional['ModelSimulation']] = relationship('ModelSimulation', lazy='select')
-
 
 
 @table_registry.mapped_as_dataclass
@@ -62,7 +60,6 @@ class ModelCitizen:
 @table_registry.mapped_as_dataclass
 class ModelRoadCrossing:
     __tablename__ = 'ROAD_CROSSING'
-
 
     red_duration: Mapped[int] = mapped_column(Integer, nullable=False)
     green_duration: Mapped[int] = mapped_column(Integer, nullable=False)

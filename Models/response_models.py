@@ -1,5 +1,6 @@
 import datetime
-from typing import Optional, List
+from typing import List, Optional
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -16,12 +17,7 @@ class ModelRoadCrossingResponse(BaseModel):
     cycle_start_time: Optional[int] = None
     created_at: Optional[datetime.datetime] = None  # Marked as Optional with default None
 
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
-        arbitrary_types_allowed=True
-    )
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, from_attributes=True, arbitrary_types_allowed=True)
 
 
 class ModelCitizenResponse(BaseModel):
@@ -34,12 +30,7 @@ class ModelCitizenResponse(BaseModel):
     road_crossings: Optional[List[ModelRoadCrossingResponse]] = []  # Default to empty list
     created_at: datetime.datetime
 
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
-        arbitrary_types_allowed=True
-    )
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, from_attributes=True, arbitrary_types_allowed=True)
 
 
 class ModelGenerationResponse(BaseModel):
@@ -47,12 +38,7 @@ class ModelGenerationResponse(BaseModel):
     citizens: Optional[List[ModelCitizenResponse]] = []  # Default to empty list
     created_at: datetime.datetime
 
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
-        arbitrary_types_allowed=True
-    )
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, from_attributes=True, arbitrary_types_allowed=True)
 
 
 class ModelSimulationResponse(BaseModel):
@@ -67,20 +53,10 @@ class ModelSimulationResponse(BaseModel):
     generations: Optional[List[ModelGenerationResponse]] = []  # Default to empty list
     created_at: datetime.datetime
 
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
-        arbitrary_types_allowed=True
-    )
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, from_attributes=True, arbitrary_types_allowed=True)
 
 
 class SimulationCreateResponse(BaseModel):
     id: int
 
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
-        arbitrary_types_allowed=True
-    )
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, from_attributes=True, arbitrary_types_allowed=True)
