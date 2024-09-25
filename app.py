@@ -21,16 +21,20 @@ app = FastAPI()
 
 # Este método não atualiza tables já existentes
 # Terá que usar uma migration tool (Alembic)
+create_table()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['*'],
+    allow_origins=[  # List the allowed origins
+        'http://localhost',
+        'http://localhost:8000',
+        'http://localhost:4200',
+    ],
     allow_credentials=True,
     allow_methods=['*'],  # Allow all HTTP methods
     allow_headers=['*'],  # Allow all headers
 )
 
-create_table()
 
 def get_database() -> DatabaseInterface:
     return Database(engine)

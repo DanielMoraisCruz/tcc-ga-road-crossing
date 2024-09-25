@@ -33,23 +33,27 @@ class GeneticAlgorithm:
         all_greens: List = []
         all_cycles: List = []
 
-        # all_reds = [ [30, 50, 20] , [ 30, 44, 60] ]
-
         for parent in parents:
             all_reds.append([crossing['redDuration'] for crossing in parent])
             all_greens.append([crossing['greenDuration'] for crossing in parent])
             all_cycles.append([crossing['cycleStartTime'] for crossing in parent])
 
-        parents_len = len(parents)
-
         while len(new_population) < self.population:
+            reds_selecteds = []
+            greens_selecteds = []
+            cycles_selecteds = []
 
             _light = []
             for j in range(3):
+                for i in range(len(parents) - 1):
+                    reds_selecteds.append(all_reds[self.random_generator.randint(0, 1)][i])
+                    greens_selecteds.append(all_greens[self.random_generator.randint(0, 1)][i])
+                    cycles_selecteds.append(all_cycles[self.random_generator.randint(0, 1)][i])
+
                 _light.append({
-                    'redDuration': all_reds[self.random_generator.randint(0, parents_len - 1)][j],
-                    'greenDuration': all_greens[self.random_generator.randint(0, parents_len - 1)][j],
-                    'cycleStartTime': all_cycles[self.random_generator.randint(0, parents_len - 1)][j],
+                    'redDuration': self.random_generator.choice(reds_selecteds),
+                    'greenDuration': self.random_generator.choice(greens_selecteds),
+                    'cycleStartTime': self.random_generator.choice(cycles_selecteds),
                 })
 
             new_population.append(_light)
