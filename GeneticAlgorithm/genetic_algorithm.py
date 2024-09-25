@@ -46,9 +46,9 @@ class GeneticAlgorithm:
             _light = []
             for j in range(3):
                 for i in range(len(parents) - 1):
-                    reds_selecteds.append(all_reds[self.random_generator.randint(0, 1)][i])
-                    greens_selecteds.append(all_greens[self.random_generator.randint(0, 1)][i])
-                    cycles_selecteds.append(all_cycles[self.random_generator.randint(0, 1)][i])
+                    reds_selecteds.append(all_reds[self.random_generator.randint(0, len(parents) - 1)][i])
+                    greens_selecteds.append(all_greens[self.random_generator.randint(0, len(parents) - 1)][i])
+                    cycles_selecteds.append(all_cycles[self.random_generator.randint(0, len(parents) - 1)][i])
 
                 _light.append({
                     'redDuration': self.random_generator.choice(reds_selecteds),
