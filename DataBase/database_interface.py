@@ -11,7 +11,8 @@ from Models.models import (
 
 
 class DatabaseInterface:
-    def get_session(self) -> Session:
+    @staticmethod
+    def get_session() -> Session:
         raise NotImplementedError
 
     @staticmethod

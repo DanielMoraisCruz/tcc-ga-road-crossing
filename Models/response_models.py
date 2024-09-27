@@ -7,7 +7,9 @@ from pydantic import BaseModel, ConfigDict
 # Helper function to convert snake_case to camelCase
 def to_camel(string: str) -> str:
     components = string.split('_')
-    return components[0] + ''.join(x.title() for x in components[1:])
+    camel_case = components[0] + ''.join(x.title() for x in components[1:])
+    print(f"Converting {string} to {camel_case}")
+    return camel_case
 
 
 class ModelRoadCrossingResponse(BaseModel):
@@ -27,16 +29,16 @@ class ModelCitizenResponse(BaseModel):
     occupation_rate: float
     vehicles_total: int
     average_speed: float
-    road_crossings: Optional[List[ModelRoadCrossingResponse]] = []  # Default to empty list
-    created_at: datetime.datetime
+    road_crossings: Optional[List[ModelRoadCrossingResponse]] = None  # Default to empty list
+    created_at: Optional[datetime.datetime] = None
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, from_attributes=True, arbitrary_types_allowed=True)
 
 
 class ModelGenerationResponse(BaseModel):
     generation_id: int
-    citizens: Optional[List[ModelCitizenResponse]] = []  # Default to empty list
-    created_at: datetime.datetime
+    citizens: Optional[List[ModelCitizenResponse]] = None  # Default to empty list
+    created_at: Optional[datetime.datetime] = None
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, from_attributes=True, arbitrary_types_allowed=True)
 
@@ -50,8 +52,8 @@ class ModelSimulationResponse(BaseModel):
     max_generations: int
     min_generations: int
     mutation_method: str
-    generations: Optional[List[ModelGenerationResponse]] = []  # Default to empty list
-    created_at: datetime.datetime
+    generations: Optional[List[ModelGenerationResponse]] = None  # Default to empty list
+    created_at: Optional[datetime.datetime] = None
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, from_attributes=True, arbitrary_types_allowed=True)
 

@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from typing import Optional
 
 from sqlalchemy import create_engine
@@ -29,8 +30,13 @@ class Database(DatabaseInterface):
     def __init__(self, _engine):
         self.engine = _engine
 
-    def get_session(self) -> Session:
-        return Session(self.engine)
+    @staticmethod
+    def get_session() -> Session:
+        session = SessionLocal()
+        try:
+            yield session
+        finally:
+            session.close()
 
     @staticmethod
     def new_simulation_iteration(session: Session, simulation_iteration: ModelSimulation) -> ModelSimulation:

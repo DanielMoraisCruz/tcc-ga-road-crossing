@@ -1,9 +1,8 @@
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import subqueryload
+from sqlalchemy.orm import subqueryload, Session
 
-from DataBase.database import Database, create_table, engine
-from DataBase.database_interface import DatabaseInterface
+from DataBase.database import create_table, Database
 from GeneticAlgorithm.genetic_algorithm import GeneticAlgorithm
 from Models.models import (
     ModelCitizen,
@@ -36,15 +35,12 @@ app.add_middleware(
 )
 
 
-def get_database() -> DatabaseInterface:
-    return Database(engine)
 
 
 @app.post('/simulation/create', response_model=SimulationCreateResponse)
-def create_simulation(simulation: SchemaSimulation, db: DatabaseInterface = Depends(get_database)):
-    session = db.get_session()
+def create_simulation(simulation: SchemaSimulation, session: Session = Depends(Database.get_session)):
     try:
-        simulation_db = db.new_simulation_iteration(
+        simulation_db = session.new_simulation_iteration(
             session,
             ModelSimulation(
                 population=simulation.population,
@@ -63,10 +59,9 @@ def create_simulation(simulation: SchemaSimulation, db: DatabaseInterface = Depe
 
 
 @app.post('/simulation/process-results/{simulation_id:int}', response_model=list[list[ModelRoadCrossingResponse]])
-def process_results(simulation_id: int, results: list[SchemaProcessResults], db: DatabaseInterface = Depends(get_database)):
-    session = db.get_session()
+def process_results(simulation_id: int, results: list[SchemaProcessResults], session: Session = Depends(Database.get_session)):
 
-    simulation = db.get_simulation(session, simulation_id)
+    simulation = session.get_simulation(session, simulation_id)
     if simulation is None:
         raise HTTPException(status_code=404, detail='Simulação não encontrada')
 
@@ -79,7 +74,7 @@ def process_results(simulation_id: int, results: list[SchemaProcessResults], db:
 
     try:
         for citizen in results:
-            saved_citizen = db.save_results(
+            saved_citizen = session.save_results(
                 session,
                 ModelCitizen(
                     generation_id=generation.generation_id,
@@ -91,7 +86,7 @@ def process_results(simulation_id: int, results: list[SchemaProcessResults], db:
                 ),
             )
             for light in citizen.lights:
-                db.new_road_crossing(
+                session.new_road_crossing(
                     session,
                     ModelRoadCrossing(
                         citizen_id=saved_citizen.citizen_id,
@@ -133,8 +128,7 @@ def process_results(simulation_id: int, results: list[SchemaProcessResults], db:
 
 
 @app.get('/simulation/final-results/{id}', response_model=ModelSimulationResponse)
-def get_final_results(id: int, db: DatabaseInterface = Depends(get_database)):
-    session = db.get_session()
+def get_final_results(id: int, session: Session = Depends(Database.get_session)):
     try:
         result = (
             session.query(ModelSimulation)
@@ -158,8 +152,7 @@ def get_final_results(id: int, db: DatabaseInterface = Depends(get_database)):
 
 
 @app.get('/simulation/all', response_model=list[ModelSimulationResponse])
-def get_all_simulations(db: DatabaseInterface = Depends(get_database)):
-    session = db.get_session()
+def get_all_simulations(session: Session = Depends(Database.get_session)) -> list[ModelSimulationResponse]:
     try:
         return session.query(ModelSimulation).order_by(ModelSimulation.simulation_id).all()  # Adaptar para o modelo de SchemaAll conforme necessário
     except Exception as e:
