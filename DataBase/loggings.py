@@ -7,7 +7,7 @@ class Log:
     def __init__(self, logger_name):
         try:
             # Nome do arquivo de log
-            log_filename = './SqlAlchemy/log_test.tsv'
+            log_filename = './DataBase/log_test.tsv'
 
             # Gera um hash único para a execução
             self.execution_key = self.new_key()
@@ -15,9 +15,7 @@ class Log:
             # Adiciona cabeçalho e chave de execução se o arquivo não existir
             if not os.path.exists(log_filename):
                 with open(log_filename, 'w', encoding='utf-8') as file:
-                    file.write(
-                        'Key Execution\tTimestamp\tLogger Name\tLine Number\tLog Level\tMessage\n'
-                    )
+                    file.write('Key Execution\tTimestamp\tLogger Name\tLine Number\tLog Level\tMessage\n')
 
             # Adiciona a chave de execução na primeira linha de
             # log de uma nova execução

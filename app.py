@@ -1,154 +1,160 @@
-import uvicorn
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import subqueryload, Session
 
-from schemas import (
-    SchemaAll,
-    SchemaDone,
-    SchemaFinalResults,
+from DataBase.database import create_table, Database
+from GeneticAlgorithm.genetic_algorithm import GeneticAlgorithm
+from Models.models import (
+    ModelCitizen,
+    ModelGeneration,
+    ModelRoadCrossing,
+    ModelSimulation,
+)
+from Models.response_models import ModelRoadCrossingResponse, ModelSimulationResponse, SimulationCreateResponse
+from Models.schemas import (
     SchemaProcessResults,
-    SchemaReturnSimulation,
     SchemaSimulation,
 )
-from SqlAlchemy.database import (
-    DB_create_tables,
-    DB_GetConfigAlgGen,
-    DB_GetSession,
-    DB_NewSimulationIteration,
-    DB_SaveConfigAlgGen,
-)
-from SqlAlchemy.models import ModelConfigAlgGen, ModelRoadCrossing, ModelSimulationIteration
-from sqlalchemy.orm import Session
 
 app = FastAPI()
 
 # Este método não atualiza tables já existentes
 # Terá que usar uma migration tool (Alembic)
-DB_create_tables()
+create_table()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['http://localhost', 'http://localhost:8000', 'http://localhost:4200'],  # List the allowed origins
+    allow_origins=[  # List the allowed origins
+        'http://localhost',
+        'http://localhost:8000',
+        'http://localhost:4200',
+    ],
     allow_credentials=True,
     allow_methods=['*'],  # Allow all HTTP methods
     allow_headers=['*'],  # Allow all headers
 )
 
 
-@app.post('/simulation/create', response_model=SchemaReturnSimulation)
-def createSimulation(simulation: SchemaSimulation, session: Session = Depends(DB_GetSession)):
+
+
+@app.post('/simulation/create', response_model=SimulationCreateResponse)
+def create_simulation(simulation: SchemaSimulation, session: Session = Depends(Database.get_session)):
     try:
-        # Salva a configuração inicial da GA
-        DB_SaveConfigAlgGen(
+
+        simulation_db = Database.new_simulation_iteration(
             session,
-            config_algGen=ModelConfigAlgGen(
+            ModelSimulation(
                 population=simulation.population,
                 mutation_rate=simulation.mutationRate,
                 selecteds=simulation.selecteds,
+                avg_time_delta=simulation.avgTimeDelta,
+                max_generations=simulation.maxGenerations,
+                min_generations=simulation.minGenerations,
+                mutation_method=simulation.mutationMethod,
             ),
         )
-        session.commit()
-    except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail=f'Erro ao criar simulação: {e}')
 
-    try:
-        # Cria uma nova simulação no banco de dados
-
-        simulationDB = DB_NewSimulationIteration(session,
-            ModelSimulationIteration(
-                selecteds=simulation.selecteds,
-                mutation_rate=simulation.mutationRate,
-                population=simulation.population
-            )
-        )
-        return {'id': simulationDB.simulationId}  # Retorna o ID da simulação criada
+        return {'id': simulation_db.simulation_id}
     except Exception as e:
-        print(e, __dict__)
         raise HTTPException(status_code=500, detail=f'Erro ao criar simulação: {e}')
 
 
-@app.post('/simulation/process-results/{id}')
-def process_results(
-    id: int, results: list[SchemaProcessResults], session: Session = Depends(DB_GetSession)
-):
+@app.post('/simulation/process-results/{simulation_id:int}', response_model=list[list[ModelRoadCrossingResponse]])
+def process_results(simulation_id: int, results: list[SchemaProcessResults], session: Session = Depends(Database.get_session)):
+
+    simulation = Database.get_simulation(session, simulation_id)
+    if simulation is None:
+        raise HTTPException(status_code=404, detail='Simulação não encontrada')
+
+    if simulation.population != len(results):
+        raise HTTPException(status_code=500, detail=f'Resultados é maior que população registrada ao criar a simulação: ' f'deveria ser {simulation.population} mas é {len(results)}')
+
+    generation = ModelGeneration(simulation_id=simulation.simulation_id)
+    session.add(generation)
+    session.flush()
+
     try:
-        all_lights: list = []
-        for result in results:
-            simulation_iteration = DB_NewSimulationIteration(
+        for citizen in results:
+            saved_citizen = Database.save_results(
                 session,
-                ModelSimulationIteration(
-                    duration=result.simulatedTime,
-                    tripAvg=result.avgTime,
-                    tripPeak=result.carsTotal,
-                    densityPeak=result.occupationRate,
-                    densityAvg=result.avgSpeed,
-                    vehiclesTotal=result.carsTotal,
-                    trafficLights=[
-                        ModelRoadCrossing(
-                            simulation_id=id,
-                            redDuration=light['redDuration'],
-                            greenDuration=light['greenDuration'],
-                            cycleStartTime=light['cycleStartTime'],
-                        )
-                        for light in result.lights
-                    ],
+                ModelCitizen(
+                    generation_id=generation.generation_id,
+                    duration=citizen.simulatedTime,
+                    trip_avg=citizen.avgTime,
+                    occupation_rate=citizen.occupationRate,
+                    vehicles_total=citizen.carsTotal,
+                    average_speed=citizen.avgSpeed,
                 ),
             )
-            session.commit()
-            # Adicionando os IDs dos semáforos em uma lista para cada iteração
-            all_lights.append([light.simulation_id for light in simulation_iteration.roadCrossing])
+            for light in citizen.lights:
+                Database.new_road_crossing(
+                    session,
+                    ModelRoadCrossing(
+                        citizen_id=saved_citizen.citizen_id,
+                        red_duration=light.redDuration,
+                        green_duration=light.greenDuration,
+                        cycle_start_time=light.cycleStartTime,
+                    ),
+                )
 
-        # Retornando a lista de listas de IDs dos semáforos
-        return all_lights
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'Erro ao salvar resultados: {e}')
+
+    try:
+        # Executa crossover e mutação
+        ga = GeneticAlgorithm(
+            mutation_method=simulation.mutation_method,
+            population=simulation.population,
+            selecteds=simulation.selecteds,
+            mutation_rate=simulation.mutation_rate,
+        )
+
+        # Critérios de parada
+        print('Gerações na simulação: ', len(simulation.generations))
+        if len(simulation.generations) >= simulation.min_generations:
+            if ga.objective_function(simulation.avg_time_delta, simulation.generations):
+                return []
+        if len(simulation.generations) >= simulation.max_generations:
+            return []
+
+        new_population = ga.crossover(results)
+
+        # Salva os resultados da simulação no banco de dados
+        session.commit()
+        print('Total de cidadãos:', len(new_population))
+        return new_population
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'Erro ao processar resultados: {e}')
 
 
-@app.post('/simulation/done/{id}', response_model=SchemaDone)
-def check_simulation_done(session: Session = Depends(DB_GetSession)):
+@app.get('/simulation/final-results/{id}', response_model=ModelSimulationResponse)
+def get_final_results(id: int, session: Session = Depends(Database.get_session)):
     try:
-        config = DB_GetConfigAlgGen(
-            session,
+        result = (
+            session.query(ModelSimulation)
+            .options(
+                # Start from ModelSimulation, and load generations
+                subqueryload(ModelSimulation.generations)  # Load generations
+                .subqueryload(ModelGeneration.citizens)  # Load citizens in each generation
+                .subqueryload(ModelCitizen.road_crossings)
+            )
+            .filter_by(simulation_id=id)
+            .first()
         )
-        done = config is None or config.population == 0  # Exemplo de verificação simples
-        return {'done': done}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f'Erro ao verificar simulação: {e}')
-
-
-@app.post('/simulation/premature-termination/{id}')
-def premature_termination(id: int, session: Session = Depends(DB_GetSession)):
-    try:
-        # Implementar lógica de término prematuro
-        # Por exemplo, remover a simulação do banco de dados
-        session.query(ModelSimulationIteration).filter_by(simulationId=id).delete()
-        session.commit()
-        return {'status': 'success'}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f'Erro ao terminar simulação: {e}')
-
-
-@app.get('/simulation/final-results/{id}', response_model=SchemaFinalResults)
-def get_final_results(id: int, session: Session = Depends(DB_GetSession)):
-    try:
-        results = session.query(ModelSimulationIteration).filter_by(simulationId=id).first()
-        if results:
-            return results  # Adaptar para o modelo de SchemaFinalResults conforme necessário
+        if result:
+            return result
         else:
             raise HTTPException(status_code=404, detail='Resultados não encontrados')
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'Erro ao buscar resultados: {e}')
+    finally:
+        session.close()
 
 
-@app.get('/simulation/all', response_model=SchemaAll)
-def get_all_simulations(session: Session = Depends(DB_GetSession)):
+@app.get('/simulation/all', response_model=list[ModelSimulationResponse])
+def get_all_simulations(session: Session = Depends(Database.get_session)) -> list[ModelSimulationResponse]:
     try:
-        simulations = session.query(ModelSimulationIteration).all()
-        return simulations  # Adaptar para o modelo de SchemaAll conforme necessário
+        return session.query(ModelSimulation).order_by(ModelSimulation.simulation_id).all()  # Adaptar para o modelo de SchemaAll conforme necessário
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'Erro ao buscar todas simulações: {e}')
-
-
-if __name__ == '__main__':
-    uvicorn.run(app, host='0.0.0.0', port=8000)
