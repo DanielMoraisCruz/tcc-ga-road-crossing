@@ -40,7 +40,8 @@ app.add_middleware(
 @app.post('/simulation/create', response_model=SimulationCreateResponse)
 def create_simulation(simulation: SchemaSimulation, session: Session = Depends(Database.get_session)):
     try:
-        simulation_db = session.new_simulation_iteration(
+
+        simulation_db = Database.new_simulation_iteration(
             session,
             ModelSimulation(
                 population=simulation.population,
@@ -61,7 +62,7 @@ def create_simulation(simulation: SchemaSimulation, session: Session = Depends(D
 @app.post('/simulation/process-results/{simulation_id:int}', response_model=list[list[ModelRoadCrossingResponse]])
 def process_results(simulation_id: int, results: list[SchemaProcessResults], session: Session = Depends(Database.get_session)):
 
-    simulation = session.get_simulation(session, simulation_id)
+    simulation = Database.get_simulation(session, simulation_id)
     if simulation is None:
         raise HTTPException(status_code=404, detail='Simulação não encontrada')
 
@@ -74,7 +75,7 @@ def process_results(simulation_id: int, results: list[SchemaProcessResults], ses
 
     try:
         for citizen in results:
-            saved_citizen = session.save_results(
+            saved_citizen = Database.save_results(
                 session,
                 ModelCitizen(
                     generation_id=generation.generation_id,
@@ -86,7 +87,7 @@ def process_results(simulation_id: int, results: list[SchemaProcessResults], ses
                 ),
             )
             for light in citizen.lights:
-                session.new_road_crossing(
+                Database.new_road_crossing(
                     session,
                     ModelRoadCrossing(
                         citizen_id=saved_citizen.citizen_id,
